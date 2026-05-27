@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>OSINT Intelligence Platform</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+:root{--bg:#0a0d16;--card:#111726;--card2:#161f33;--blue:#00f2fe;--orange:#ff9100;--green:#00e676;--purple:#e040fb;--red:#ff1744;--sec:#94a3b8;--brd:#202b42}
+*{box-sizing:border-box}body{font-family:'Segoe UI',sans-serif;background:var(--bg);color:#fff;margin:0;padding:16px}
+.wrap{max-width:1300px;margin:0 auto}
+
+/* Header */
+header{text-align:center;margin-bottom:18px}
+header h1{color:var(--blue);margin:0;font-size:22px;letter-spacing:1px}
+header p{color:var(--sec);font-size:12px;margin:4px 0 0}
+
+/* Tabs */
+.tabs{display:flex;justify-content:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.tab{background:var(--card);border:1px solid var(--brd);color:var(--sec);padding:9px 22px;border-radius:8px;cursor:pointer;font-weight:600;font-size:13px;transition:.2s}
+.tab.active{background:linear-gradient(135deg,#0055cc,#00b4d8);color:#fff;border-color:transparent;box-shadow:0 0 12px rgba(0,180,216,.3)}
+
+/* Search */
+.search{background:var(--card);padding:14px 16px;border-radius:12px;display:flex;gap:10px;align-items:center;margin-bottom:18px;border:1px solid var(--brd);flex-wrap:wrap}
+.search select,.search input{background:var(--bg);border:1px solid var(--brd);color:#fff;padding:10px 12px;border-radius:8px;font-size:13px;outline:none}
+.search select:focus,.search input:focus{border-color:var(--blue)}
+.search input{flex:1;min-width:180px}
+.btn{border:none;padding:10px 24px;border-radius:8px;font-weight:700;cursor:pointer;font-size:13px;white-space:nowrap;transition:.2s}
+.btn-primary{background:var(--blue);color:#0a0d16}.btn-primary:hover{opacity:.85}
+.btn-whois{background:transparent;color:var(--purple);border:1px solid var(--purple)}.btn-whois:hover{background:rgba(224,64,251,.1)}
+.btn-port{background:transparent;color:var(--orange);border:1px solid var(--orange)}.btn-port:hover{background:rgba(255,145,0,.1)}
+#file-wrap{display:none;flex:1}
+
+/* Summary row */
+.row2{display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:18px}
+.card{background:var(--card);border-radius:12px;padding:16px 18px;border:1px solid var(--brd)}
+.ptitle{font-size:13px;color:var(--blue);margin:0 0 12px;font-weight:700}
+.risk-badge{font-size:18px;font-weight:700;text-align:center;padding:11px;border-radius:8px;margin-top:8px}
+.risk-low{background:rgba(0,230,118,.1);color:var(--green);border:1px solid var(--green)}
+.risk-medium{background:rgba(255,145,0,.1);color:var(--orange);border:1px solid var(--orange)}
+.risk-high{background:rgba(255,23,68,.1);color:var(--red);border:1px solid var(--red)}
+
+/* Workspace */
+.workspace{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:18px}
+#map{width:100%;height:360px;background:var(--bg);border-radius:8px;border:1px solid var(--brd)}
+
+/* Geo info bar */
+#geo-bar{display:none;margin-top:10px;background:var(--card2);border-radius:8px;padding:10px 14px;font-size:12px;border:1px solid var(--brd)}
+#geo-bar.on{display:flex;flex-wrap:wrap;gap:14px}
+.geo-item{display:flex;flex-direction:column;gap:2px}
+.geo-label{color:var(--sec);font-size:10px;text-transform:uppercase;letter-spacing:.5px}
+.geo-val{color:#fff;font-weight:600}
+
+/* Entity table */
+.etable{width:100%;border-collapse:collapse;font-size:12px}
+.etable th{text-align:left;color:var(--blue);padding:8px;border-bottom:2px solid var(--brd);font-size:11px}
+.etable td{padding:9px 8px;border-bottom:1px solid #1a233a;vertical-align:middle}
+.etag{display:inline-block;padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700}
+.t-domain{background:rgba(0,242,254,.12);color:var(--blue)}
+.t-ip{background:rgba(0,230,118,.12);color:var(--green)}
+.t-email{background:rgba(255,145,0,.12);color:var(--orange)}
+.t-subdomain{background:rgba(224,64,251,.12);color:var(--purple)}
+.t-social{background:rgba(0,191,255,.12);color:#00bfff}
+.t-app{background:rgba(255,235,59,.12);color:#ffeb3b}
+.t-nameserver{background:rgba(129,212,250,.12);color:#81d4fa}
+.t-mail{background:rgba(255,145,0,.12);color:var(--orange)}
+.t-port_open{background:rgba(0,230,118,.12);color:var(--green)}
+.t-image,.t-geo{background:rgba(224,64,251,.12);color:var(--purple)}
+.t-network,.t-alert{background:rgba(255,23,68,.12);color:var(--red)}
+
+/* Whois */
+#whois-sec{display:none;margin-bottom:18px}
+#whois-sec.on{display:block}
+.wgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px}
+.wcard{background:var(--card2);border-radius:10px;padding:14px 16px;border:1px solid var(--brd)}
+.wcard h4{color:var(--blue);margin:0 0 10px;font-size:12px;border-bottom:1px solid var(--brd);padding-bottom:7px}
+.wrow{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid #1a233a;font-size:12px;gap:10px}
+.wrow:last-child{border:none}
+.wlbl{color:var(--sec);white-space:nowrap}
+.wval{color:#fff;text-align:right;word-break:break-all}
+.dtag{display:inline-block;background:#1a2540;border:1px solid var(--brd);border-radius:4px;padding:2px 7px;font-size:10px;margin:2px;font-family:monospace;color:var(--blue)}
+
+/* Port scan */
+#port-sec{display:none;margin-bottom:18px}
+#port-sec.on{display:block}
+.pgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px;margin-top:12px}
+.pcard{background:var(--card2);border-radius:8px;padding:10px 12px;border:1px solid var(--brd);font-size:12px}
+.pcard.open{border-color:var(--green)}
+.pcard.danger{border-color:var(--red)}
+.pnum{font-size:17px;font-weight:700;color:var(--blue)}
+.popen{color:var(--green);font-size:11px}
+
+/* Loader */
+#loader{display:none;text-align:center;padding:10px;color:var(--blue);font-size:13px}
+#loader.on{display:block}
+
+@media(max-width:768px){.row2,.workspace{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>🛡️ OSINT Intelligence Platform</h1>
+  <p>Unified Digital Intelligence — DNS · SSL · Port Scanner · Whois · Geo IP</p>
+</header>
+
+<div class="tabs">
+  <button id="btn-infra" class="tab active" onclick="switchBranch('infrastructure')">🏢 Infrastructure</button>
+  <button id="btn-pers"  class="tab"        onclick="switchBranch('personal')">👤 Individual Tracking</button>
+</div>
+
+<div class="search">
+  <select id="sel-type" onchange="handleTypeChange()"></select>
+  <input type="text" id="val" placeholder="Enter target...">
+  <div id="file-wrap"><input type="file" id="img-file" accept="image/*" style="background:#1e293b;border:1px dashed var(--blue);color:#fff;padding:9px;border-radius:8px;width:100%"></div>
+  <button class="btn btn-primary"  onclick="doScan()">🔍 Scan</button>
+  <button class="btn btn-whois"    id="btn-whois" onclick="doWhois()"    style="display:none">🔎 Whois</button>
+  <button class="btn btn-port"     id="btn-port"  onclick="doPortScan()" style="display:none">🔌 Port Scan</button>
+</div>
+
+<div id="loader">⏳ Processing...</div>
+
+<div class="row2">
+  <div class="card">
+    <div class="ptitle">📋 Intelligence Summary</div>
+    <p id="summary" style="font-size:13px;line-height:1.7;color:var(--sec);margin:0">Select branch and scan type to begin...</p>
+  </div>
+  <div class="card" style="display:flex;flex-direction:column;justify-content:center">
+    <div style="text-align:center;color:var(--sec);font-size:12px;margin-bottom:6px">Threat Level</div>
+    <div id="risk" class="risk-badge risk-low">Idle</div>
+  </div>
+</div>
+
+<div class="workspace">
+  <div class="card">
+    <div class="ptitle">🔗 Nodes & Edges</div>
+    <div style="overflow-x:auto">
+      <table class="etable">
+        <thead><tr><th>Type</th><th>Node</th><th>Relation</th><th>Target</th></tr></thead>
+        <tbody id="tbl"><tr><td colspan="4" style="text-align:center;color:var(--sec);padding:18px">No data yet.</td></tr></tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ptitle">🌍 Geo IP Map</div>
+    <div id="map"></div>
+    <div id="geo-bar"></div>
+  </div>
+</div>
+
+<!-- Whois -->
+<div id="whois-sec">
+  <div class="card">
+    <div class="ptitle">🔎 Whois Lookup Results</div>
+    <div id="whois-cnt"><p style="color:var(--sec);font-size:13px">Loading...</p></div>
+  </div>
+</div>
+
+<!-- Port Scan -->
+<div id="port-sec">
+  <div class="card">
+    <div class="ptitle">🔌 Port Scanner Results</div>
+    <div id="port-cnt"></div>
+  </div>
+</div>
+
+</div>
+
+<script>
+let branch = 'infrastructure';
+let leafMap = L.map('map').setView([20,0],2);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{attribution:'© OSM'}).addTo(leafMap);
+let marker = null;
+
+// ── Geo lookup from browser (bypasses server restriction) ──
+async function geoLookup(ip){
+  if(!ip || ip==='-') return null;
+  try{
+    const r = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,city,lat,lon,isp,org,as,timezone`);
+    const d = await r.json();
+    if(d.status==='success') return d;
+  } catch(e){}
+  return null;
+}
+
+function updateMap(geo, label){
+  if(!geo || !geo.lat) return;
+  if(marker) leafMap.removeLayer(marker);
+  leafMap.setView([geo.lat, geo.lon], 6);
+  marker = L.marker([geo.lat, geo.lon]).addTo(leafMap)
+    .bindPopup(`<b>${label||'Target'}</b><br>${geo.city}, ${geo.country}<br><small>${geo.isp||''}</small>`)
+    .openPopup();
+
+  const bar = document.getElementById('geo-bar');
+  bar.className = 'on';
+  bar.innerHTML = [
+    ['Country', geo.country||'-'],
+    ['City',    geo.city||'-'],
+    ['ISP',     geo.isp||'-'],
+    ['ASN',     geo.as||'-'],
+    ['Timezone',geo.timezone||'-'],
+    ['Coords',  `${geo.lat.toFixed(4)}, ${geo.lon.toFixed(4)}`],
+  ].map(([l,v])=>`<div class="geo-item"><span class="geo-label">${l}</span><span class="geo-val">${v}</span></div>`).join('');
+}
+
+// ── Branch ──
+function switchBranch(b){
+  branch = b;
+  document.getElementById('btn-infra').className = b==='infrastructure'?'tab active':'tab';
+  document.getElementById('btn-pers').className  = b==='personal'?'tab active':'tab';
+  const sel = document.getElementById('sel-type');
+  sel.innerHTML = b==='infrastructure'
+    ? `<option value="domain">🌐 Domain</option><option value="ip">🖥️ IP Address</option><option value="email">📧 Email</option>`
+    : `<option value="username">👤 Username</option><option value="phone">📱 Phone / Email</option><option value="ip">📍 IP Address</option><option value="image">🖼️ Image (EXIF)</option>`;
+  handleTypeChange();
+}
+
+function handleTypeChange(){
+  const t = document.getElementById('sel-type').value;
+  document.getElementById('val').style.display      = t==='image'?'none':'block';
+  document.getElementById('file-wrap').style.display= t==='image'?'block':'none';
+  document.getElementById('btn-whois').style.display= (t==='domain'&&branch==='infrastructure')?'inline-block':'none';
+  document.getElementById('btn-port').style.display = (t==='ip'||t==='domain')?'inline-block':'none';
+  const ph={domain:'e.g. google.com',ip:'e.g. 8.8.8.8',email:'e.g. user@domain.com',username:'e.g. john_doe',phone:'e.g. +9647801234567'};
+  document.getElementById('val').placeholder = ph[t]||'Enter target...';
+  document.getElementById('whois-sec').classList.remove('on');
+  document.getElementById('port-sec').classList.remove('on');
+}
+
+// ── Scan ──
+async function doScan(){
+  const t = document.getElementById('sel-type').value;
+  setLoad(true);
+  try{
+    let res;
+    if(t==='image'){
+      const fi=document.getElementById('img-file');
+      if(!fi.files.length){alert('Please select an image!');return;}
+      const fd=new FormData(); fd.append('branch',branch); fd.append('file',fi.files[0]);
+      res=await fetch('http://127.0.0.1:8000/api/v1/scan-image',{method:'POST',body:fd});
+    } else {
+      const v=document.getElementById('val').value.trim();
+      if(!v){alert('Please enter a target!');return;}
+      res=await fetch('http://127.0.0.1:8000/api/v1/scan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({branch,target_type:t,value:v})});
+    }
+    const d = await res.json();
+    renderScan(d);
+    // Geo lookup from browser
+    if(d.resolved_ip){
+      const geo = await geoLookup(d.resolved_ip);
+      if(geo) updateMap(geo, d.resolved_ip);
+    }
+  } catch(e){ alert('❌ Make sure server is running: uvicorn main:app --reload'); }
+  finally{ setLoad(false); }
+}
+
+// ── Whois ──
+async function doWhois(){
+  const domain = document.getElementById('val').value.trim();
+  if(!domain){alert('Enter a domain first!');return;}
+  const sec=document.getElementById('whois-sec'), cnt=document.getElementById('whois-cnt');
+  sec.classList.add('on');
+  cnt.innerHTML='<p style="color:var(--sec);font-size:13px">⏳ Fetching Whois data...</p>';
+  setLoad(true);
+  try{
+    const res=await fetch('http://127.0.0.1:8000/api/v1/whois',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({domain})});
+    const d=await res.json();
+    renderWhois(d,cnt);
+    // Geo lookup for whois IP
+    if(d.resolved_ip){
+      const geo=await geoLookup(d.resolved_ip);
+      if(geo) updateMap(geo, d.domain);
+    }
+  } catch(e){ cnt.innerHTML='<p style="color:var(--red)">❌ Connection failed.</p>'; }
+  finally{ setLoad(false); }
+}
+
+// ── Port Scan ──
+async function doPortScan(){
+  const v=document.getElementById('val').value.trim();
+  if(!v){alert('Enter a target!');return;}
+  const sec=document.getElementById('port-sec'), cnt=document.getElementById('port-cnt');
+  sec.classList.add('on');
+  cnt.innerHTML='<p style="color:var(--sec);font-size:13px">⏳ Scanning ports (~2 seconds)...</p>';
+  setLoad(true);
+  try{
+    const res=await fetch('http://127.0.0.1:8000/api/v1/portscan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({target:v})});
+    renderPortScan(await res.json(),cnt);
+  } catch(e){ cnt.innerHTML='<p style="color:var(--red)">❌ Connection failed.</p>'; }
+  finally{ setLoad(false); }
+}
+
+// ── Renderers ──
+function renderScan(d){
+  document.getElementById('summary').innerText = d.summary||'';
+  const rb=document.getElementById('risk');
+  const lv=(d.risk_assessment?.level||'Low').toLowerCase();
+  rb.innerText=`${d.risk_assessment?.level} (${d.risk_assessment?.score}%)`;
+  rb.className=`risk-badge risk-${lv}`;
+  renderTable(d.graph_data);
+}
+
+function renderTable(gd){
+  const nm={};
+  (gd?.nodes||[]).forEach(n=>nm[n.id]=n);
+  const tb=document.getElementById('tbl');
+  tb.innerHTML='';
+  const edges=gd?.edges||[], nodes=gd?.nodes||[];
+  if(!edges.length && nodes.length){
+    const n=nodes[0];
+    tb.innerHTML=`<tr><td><span class="etag t-${(n.type||'').toLowerCase()}">${n.type}</span></td><td><b>${n.label}</b></td><td colspan="2" style="color:var(--sec)">Standalone node</td></tr>`;
+  } else {
+    edges.forEach(e=>{
+      const s=nm[e.source],t=nm[e.target];
+      if(s&&t) tb.innerHTML+=`<tr>
+        <td><span class="etag t-${(s.type||'').toLowerCase()}">${s.type}</span></td>
+        <td style="font-size:11px"><b>${s.label}</b></td>
+        <td style="color:var(--sec);font-size:11px">→ ${e.relation}</td>
+        <td><span class="etag t-${(t.type||'').toLowerCase()}">${t.type}</span> <span style="font-size:11px">${t.label}</span></td>
+      </tr>`;
+    });
+  }
+}
+
+function renderWhois(d,c){
+  const dns=d.dns_records||{}, ssl=d.ssl||{};
+  const tags=arr=>arr?.length?arr.map(v=>`<span class="dtag">${v}</span>`).join(''):'<span style="color:var(--sec)">—</span>';
+  const sslBadge=ssl.valid
+    ?`<span style="color:var(--green)">✅ Valid</span> — Issued by: ${ssl.issuer||'?'} — Expires: ${ssl.expiry||'?'}`
+    :`<span style="color:var(--red)">❌ Invalid / Not Found</span>`;
+  c.innerHTML=`
+  <p style="font-size:12px;color:var(--sec);margin:0 0 14px">${d.summary||''}</p>
+  <div class="wgrid">
+    <div class="wcard"><h4>📋 Domain Info</h4>
+      <div class="wrow"><span class="wlbl">Domain</span><span class="wval"><b>${d.domain}</b></span></div>
+      <div class="wrow"><span class="wlbl">TLD</span><span class="wval">.${(d.tld||'').toLowerCase()}</span></div>
+      <div class="wrow"><span class="wlbl">Type</span><span class="wval">${d.domain_type||'—'}</span></div>
+      <div class="wrow"><span class="wlbl">Registrar</span><span class="wval">${d.registrar||'—'}</span></div>
+    </div>
+    <div class="wcard"><h4>🔗 DNS Records</h4>
+      <div class="wrow"><span class="wlbl">A</span><span class="wval">${tags(dns.A)}</span></div>
+      <div class="wrow"><span class="wlbl">NS</span><span class="wval">${tags(dns.NS)}</span></div>
+      <div class="wrow"><span class="wlbl">MX</span><span class="wval">${tags(dns.MX)}</span></div>
+    </div>
+    <div class="wcard"><h4>🔒 SSL / TLS Certificate</h4>
+      <div class="wrow"><span class="wlbl">Status</span><span class="wval">${sslBadge}</span></div>
+      <div class="wrow"><span class="wlbl">Subject</span><span class="wval">${ssl.subject||'—'}</span></div>
+      ${ssl.sans?.length?`<div class="wrow"><span class="wlbl">SANs</span><span class="wval">${tags(ssl.sans)}</span></div>`:''}
+    </div>
+  </div>`;
+  renderTable(d.graph_data);
+}
+
+function renderPortScan(d,c){
+  const DANGER=new Set([21,22,23,445,3389]);
+  const open=d.open_ports||[];
+  const lv=(d.risk_assessment?.level||'Low').toLowerCase();
+  const cards=open.map(p=>`
+    <div class="pcard open ${DANGER.has(p.port)?'danger':''}">
+      <div class="pnum">${p.port}</div>
+      <div style="color:#fff;font-size:12px;margin:2px 0">${p.service}</div>
+      <div class="popen">● Open${DANGER.has(p.port)?' ⚠️':''}</div>
+    </div>`).join('');
+  c.innerHTML=`
+  <p style="font-size:13px;margin:0 0 10px">${d.summary||''}</p>
+  <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap">
+    <span style="background:rgba(0,230,118,.12);color:var(--green);padding:5px 14px;border-radius:6px;font-size:12px;font-weight:700">✅ Open: ${open.length}</span>
+    <span style="background:rgba(148,163,184,.08);color:var(--sec);padding:5px 14px;border-radius:6px;font-size:12px;font-weight:700">🔒 Closed: ${d.closed_count||0}</span>
+    <span class="risk-badge risk-${lv}" style="padding:5px 14px;font-size:12px;margin:0">Risk: ${d.risk_assessment?.level} (${d.risk_assessment?.score}%)</span>
+  </div>
+  ${open.length?`<div class="pgrid">${cards}</div>`:'<p style="color:var(--sec);font-size:13px">No open ports found.</p>'}`;
+}
+
+function setLoad(on){ document.getElementById('loader').className=on?'on':''; }
+switchBranch('infrastructure');
+</script>
+</body>
+</html>
