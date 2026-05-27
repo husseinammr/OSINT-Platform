@@ -1,4 +1,4 @@
-# 🛰️ Advanced OSINT Platform
+# 🛰️ Advanced OSINT Platform https://husseinammr.github.io/OSINT-Platform/ للتجربه المشروع
 
 ![Status](https://img.shields.io/badge/status-active-success)
 ![Python](https://img.shields.io/badge/Python-3.10+-blue)
